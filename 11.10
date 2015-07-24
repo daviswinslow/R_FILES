@@ -1,0 +1,66 @@
+head(USArrests)
+apply(USArrests, 2, mean)
+apply(USArrests, 2, var)
+pr.out <- prcomp(USArrests, scale=TRUE)
+pr.out$rotation=-pr.out$rotation
+pr.out$x=-pr.out$x
+
+round(pr.out$rotation[,1:2],3)
+biplot(pr.out, scale=0)
+
+GGally::ggpairs(USArrests)
+
+install.packages("MBESS")
+library(MBESS)
+data(HS.data)
+head(HS.data)
+
+hozdata <- HS.data[complete.cases(HS.data),c(7, 9, 10, 12, 13, 15, 16, 18, 19)]  # extracting some variables from the dataset
+summary(hozdata)
+
+hozdatamatrix <- cor(hozdata)
+round(hozdatamatrix,3)
+
+install.packages("psych")
+library(psych)
+
+cortest.bartlett(hozdata)
+
+round(det(hozdatamatrix),7)
+
+dim(hozdata)
+KMO(hozdatamatrix)
+
+model1 <- principal(hozdata, nfactors = 9, rotate = "none")
+model1
+
+plot(model1$values, type = "b") ## "screeplot" - interested in point of inflexion (where the rubble collects at the base of a mountain)
+
+install.packages("GPArotation")
+library(GPArotation)
+
+model1.nr <- principal(hozdata, nfactors = 3, rotate = "none")
+print.psych(model1.nr, cut=0.3, sort=T)
+
+model3b <- principal(hozdata, nfactors = 3, rotate = "oblimin", scores = TRUE)
+print.psych(model3b, cut=0.3, sort=T)
+
+head(model3b$scores, 10) ## factor score coeffecients
+
+summary(model3b$scores)
+
+install.packages("mosaicData")
+library(mosaicData)
+str(Whickham)
+
+Whickham$outcome.num <- as.integer(Whickham$outcome)-1
+
+ggplot(Whickham, aes(x=age, y=outcome, color=smoker)) + geom_point(position=position_jitter(h=0.1, w=0.1), alpha=0.7, shape=1)
+
+library(arm)
+
+fitlm1 <- lm(outcome.num ~ age, data=Whickham)
+display(fitlm1, digits=3)
+
+
+ggplot(Whickham, aes(x=age, y=outcome.num)) + geom_point(position=position_jitter(h=0.1, w=0.1), alpha=0.7, shape=1) + geom_smooth(method="glm", family="binomial")
