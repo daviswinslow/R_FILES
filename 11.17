@@ -1,0 +1,94 @@
+install.packages("mosaicData")
+library(mosaicData)
+str(Whickham)
+
+library(foreign)
+library(arm)
+library(ggplot2)
+
+
+Whickham$outcome.num <- as.integer(Whickham$outcome)-1
+
+ggplot(Whickham, aes(x=age, y=outcome, color=smoker)) + geom_point(position=position_jitter(h=0.1, w=0.1), alpha=0.7, shape=1)
+
+library(arm)
+
+fitlm1 <- lm(outcome.num ~ age, data=Whickham)
+display(fitlm1, digits=3)
+
+
+ggplot(Whickham, aes(x=age, y=outcome.num)) + geom_point(position=position_jitter(h=0.1, w=0.1), alpha=0.7, shape=1) + geom_smooth(method="glm", family="binomial")
+
+
+fitdoa.1 <- glm(outcome~smoker, data=Whickham, family=binomial(link="logit"))
+display(fitdoa.1) ## predictive effect --- reduces probability of being dead if you're a smoker
+
+smokedeath <- table(Whickham$outcome, Whickham$smoker)
+smokedeath
+
+round(prop.table(smokedeath, margin=2),2) ## margin 2 specifies proportion in each column
+
+exp(fitdoa.1$coefficients)  ## odds ratio; makes more sense with categorical variables. Takes exponential of both coefficients (puts them to the ^e power)
+                            ## predicted odds of smokers being dead 20 years after the first survey are 0.68 times the odds of being dead when you're a nonsmoker.
+                            ## CONFOUNDING VARIABLE: age!!
+
+fitdoa.2 <- glm(outcome ~ age + smoker, data=Whickham, family=binomial(link="logit"))
+display(fitdoa.2)
+
+
+Whickham$predicted <- predict(fitdoa.2, type="response")
+ggplot(Whickham, aes(x=age, y=outcome.num, color=smoker)) + geom_point(position=position_jitter(h=0.1, w=0.1), alpha=0.7, shape=1) + geom_line(aes(x=age, y=predicted, color=smoker))
+
+invlogit(-7.6 + 0.12*50 + 0.20*1)
+
+Whickham$fit.dead <- ifelse(fitdoa.2$fitted.values > 0.5, "Dead", "Alive")  ## if predicted value is greater than 50%, call it "Dead". Otherwise, call it "Alive".
+confusionmatrix <- table(Whickham$fit.dead, Whickham$outcome)
+confusionmatrix
+
+##  Alive Dead
+##  Alive   851  118
+##  Dead     94  251
+##
+## 851 are predicted to be alive and are in fact alive. 118 are predicted alive but are dead. 94 are predicted dead but are alive. 251 are predicted dead and are dead.
+
+acc1 <- mean(Whickham$fit.dead == Whickham$outcome)  ## calculating % of correct predictions
+acc1
+
+#####################################################################
+
+
+install.packages("ISLR")
+library(ISLR)
+str(Weekly)
+
+fit.islr1 <- glm(Direction ~ Lag2:Volume, data=Weekly, family=binomial(link="logit"))
+display(fit.islr1)
+
+exp(fit.islr1$coefficients) 
+
+ggplot(Weekly, aes(x=Year, y=Volume, color=Direction)) + geom_point(position=position_jitter(h=0.1, w=0.1), alpha=0.7, shape=1)
+
+Weekly$fit.islr1 <- ifelse(fit.islr1$fitted.values > 0.5, "Down", "Up")  ## if predicted value is greater than 50%, call it "Dead". Otherwise, call it "Alive".
+confusionmatrix <- table(Weekly$fit.islr1, Weekly$Direction)
+confusionmatrix
+
+acc2 <- mean(Weekly$fit.islr1 == Weekly$Direction)  ## calculating % of correct predictions
+acc2
+cv.binary(fit.islr1)
+
+#####
+
+null.model <- glm(Direction ~ 1, data=Weekly, family=binomial(link="logit"))
+display(null.model)
+install.packages("DAAG")
+library(DAAG)
+cv.binary(null.model)
+
+Weekly$fit.islr1 <- ifelse(fit.islr1$fitted.values > 0.5, "Down", "Up")  ## if predicted value is greater than 50%, call it "Dead". Otherwise, call it "Alive".
+confusionmatrix <- table(Weekly$fit.islr1, Weekly$Direction)
+confusionmatrix
+
+acc2 <- mean(Weekly$fit.islr1 == Weekly$Direction)  ## calculating % of correct predictions
+acc2
+
+
