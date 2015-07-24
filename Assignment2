@@ -1,0 +1,266 @@
+##################
+# Davis Winslow  #
+# 11/3/14       #
+# Advanced Quant #
+# 2nd Regression #
+##################
+
+
+##############
+#Excercise 1 #
+##############
+
+
+## Loading packages and data ##
+install.packages("arm")
+library(arm)
+library(foreign)
+install.packages("car")
+library(car)
+library(ggplot2)
+
+kidiq <- read.dta(file = "/Users/daviswinslow/Dropbox/Advanced Quantitative Methods/R_Database/kidiq.dta", convert.dates = TRUE, convert.factors = TRUE, 
+                  missing.type = FALSE, 
+                  convert.underscore = FALSE, warn.missing.labels = TRUE)
+attach(kidiq)
+summary(kidiq)
+head(kidiq)
+
+########
+## 5) ##
+########
+
+plot1 <- plot(mom_iq, kid_score, xlab="Mother IQ score", ylab="Child test score")
+
+# fitted a model for kid IQ score. Coeffecient estimates show that when mom_hs=0 (mom did not graduate from high school), 
+# the intercept is -11.48 and the slope is 0.97. The difference when the mother does graduate from high school is 51.27, 
+# and you substract -0.48 from the slope.
+fit.kidiq <- lm(kid_score ~ mom_iq + mom_hs + mom_iq:mom_hs, data=kidiq)
+display(fit.kidiq)
+summary(fit.kidiq)
+plot(fit.kidiq)
+
+# set up a prediction for kid IQ score based on mom IQ score and high school education.
+predict1 <- predict(lm(kid_score ~ mom_iq + mom_hs + mom_iq:mom_hs, data=kidiq))
+summary(predict1)
+plot(predict1)
+
+# set up a new model for kids with average IQ whose mothers graduated from high school. 
+# The 95% prediction interval of kid IQ score for mothers who graduated high school and have average IQ
+# is between 52.8719 and 123.6234.
+newmodel <- data.frame(mom_hs=1, mom_iq=mean(mom_iq))
+predict(fit.kidiq, newmodel, interval="predict") 
+
+# The 95% prediction interval of kid IQ score for mothers who did not graduate high school and have average IQ
+# is between 49.816 and 120.9978.
+newmodel2 <- data.frame(mom_hs=0, mom_iq=mean(mom_iq))
+predict(fit.kidiq, newmodel2, interval="predict") 
+
+
+########
+## 6) ##
+########
+
+## applied a logarithm, another transformation we've learned is centering on a variable # 
+
+fit.log.kidiq <- lm(log(kid_score) ~ mom_iq + mom_hs + mom_iq:mom_hs, data=kidiq)
+display(fit.log.kidiq)
+
+
+########
+## 7) ##
+########
+
+# Residuals from 1.5. The residuals are not normally distributed
+kidiq.resid = resid(fit.kidiq)
+summary(kidiq.resid)
+ggplot(aes(x=kid_score, y=kidiq.resid), data=kidiq) + geom_point() + geom_smooth(se=FALSE) + labs(x="Kid IQ Score", y="Residuals")
+
+# residuals from 1.6. The shape of the curve is different. Seems like more of a normal distribution.
+log.kidiq.resid = resid(fit.log.kidiq)
+summary(log.kidiq.resid)
+ggplot(aes(x=kid_score, y=log.kidiq.resid), data=kidiq) + geom_point() + geom_smooth(se=FALSE) + labs(x="Kid IQ Score", y="Residuals")
+plot(fit.log.kidiq)
+
+shapiro.test(residuals(fit.log.kidiq)) # the residuals are normally distributed
+ncvTest(fit.log.kidiq) # Homoskedasticity.
+
+ggplot(aes(x=kid_score, y=.resid), data=kidiq) + geom_point() + geom_smooth(se=FALSE) + labs(x="Kid IQ", y="Residuals")
+
+########
+## 8) ##
+########
+
+x.new <- data.frame (mom.hs=1, mom.iq=95)
+predict.new <- predict (fit.log.kidiq, x.new, interval="prediction", level=0.95)
+
+# Mean is 4.430855
+mean.xnew <- mean(predict.new)
+
+# Uncertainty of the estimate.
+se.xnew <- sd(mean.xnew)/sqrt(50)
+lower1 <- samp1 - 1.96 * se
+upper1 <- samp1 + 1.96 * se
+se.xnew
+lower1
+mean(lower1)
+upper1
+mean(upper1)
+
+########
+## 9) ##
+########
+
+install.packages("miscTools")
+library(miscTools)
+
+# r-squared for different models (copied last assignment below to bring in dataframes).
+anova(newmodel, kidscore.momhs, kidscore.momiq.momhs, fit.kidiq, test = "Chisq")
+summary(newmodel)$r.squared
+summary(kidscore.momhs)$r.squared
+summary(fit.kidiq)$r.squared
+summary(fit.log.kidiq)$r.squared
+
+r.squared.models <- c(summary(newmodel)$r.squared, summary(kidscore.momhs)$r.squared, summary(fit.kidiq)$r.squared, summary(fit.log.kidiq)$r.squared)
+r.squared.models
+plot(r.squared.models)
+
+
+
+
+
+################################################
+## OLD ASSIGNMENT. CAN RUN FOR LAST EXERCISE ###
+################################################
+
+# Davis Winslow
+# 10.6.2014
+# Advanced Quantitative Methods
+# Assignment 3
+
+
+##############
+#Excercise 1 #
+##############
+
+
+
+## 2) Loaded the data from the web ##
+read.table(file="http://jaredlander.com/data/housing.csv", header=TRUE, sep=",", stringsAsFactors=FALSE)
+
+## created a data frame for housing
+housing <- read.table(file="http://jaredlander.com/data/housing.csv", header=TRUE, sep=",", stringsAsFactors=FALSE)
+
+install.packages("ggplot2")  #installing ggplot
+library("ggplot2")
+install.packages("GGally")  #installing GGally
+library("GGally")
+
+summary(housing)
+
+hist(housing$Market.Value.per.SqFt)
+
+## 3) Taking a sample of the population 
+samp1 <- sample(housing$Market.Value.per.SqFt, 50)
+
+summary(samp1)
+
+##visualization##
+hist(samp1, main = "Sample distribution") 
+
+## The distribution of the sample is more even than the distribution of the population. Frequencies for 50-250 are pretty similar.
+
+## 4) Sample mean ##
+mean(samp1)
+
+## Population mean ##
+mean(housing$Market.Value.per.SqFt) ##131.1872
+
+samp2 <- sample(housing$Market.Value.per.SqFt, 50)
+samp2
+
+mean(samp2)
+
+## The mean of samp2 is closer to the population mean than mean of samp1.
+
+## 6) How uncertain are we of the estimate?
+se <- sd(samp1)/sqrt(50)
+lower <- samp1 - 1.96 * se
+upper <- samp1 + 1.96 * se
+se
+lower
+mean(lower)
+upper
+mean(upper)
+
+## The confidence interval does capture the true market price. But the standard error (9.24) seems relatively high compared to the mean, so there is a lot of variability between means of different samples.
+
+samp_mean <- rep(NA, 5000)
+samp_sd <- rep(NA, 5000)
+n <- 50
+for (i in 1:5000) {
+  samp <- sample(housing$Market.Value.per.SqFt, n) # obtain a sample of size n = 50 from the population
+  samp_mean[i] <- mean(samp)    # save sample mean in ith element of samp_mean
+  samp_sd[i] <- sd(samp)        # save sample sd in ith element of samp_sd
+}
+
+mean(samp_mean)
+qplot(samp_mean, main = "Sample Mean", binwidth = 1)  # Question: in this case, are qplot and hist doing the same thing?
+## sample mean seems to have a normal distribution (as expected with the central limit theorem), centered around the mean. I wouldn't expect the distribution to change much with collecting 50,000 sample means, as we already have a large number of samples (I would guess it would smooth out the graph a little).
+
+## 8) confidence intervals for each sample mean##
+lower1 <- samp_mean - 1.96 * samp_sd/sqrt(n)
+upper1 <- samp_mean + 1.96 * samp_sd/sqrt(n)
+
+c(lower1[1], upper1[1])
+## It does capture the true population mean. 
+
+##optional## not sure what this does
+covers <- lower1 <= mean(housing$Market.Value.per.SqFt) & upper1 >= mean(housing$Market.Value.per.SqFt)
+sum(covers)/length(covers)
+
+
+##############
+#Excercise 2 #
+##############
+
+
+install.packages("arm")
+library(arm)
+library(foreign)
+
+kidiq <- read.dta(file = "c:/kidiq.dta", convert.dates = TRUE, convert.factors = TRUE, 
+                  missing.type = FALSE, 
+                  convert.underscore = FALSE, warn.missing.labels = TRUE)
+summary(kidiq)
+head(kidiq)
+
+## 2) predicting kid_score
+newmodel <- lm(kid_score ~ mom_iq, data=kidiq)
+
+display(newmodel)
+## The coefficient estimate of mom_iq is 0.61, meaning (I hope) that for every unit 
+## increase in a mother's IQ score, child's IQ score increases 0.61.
+##
+## Giving this a shot too, the Pearson correlation coeffecient is 0.45. R^2 was 0.20, so (in this model) 20 percent 
+## of variation in kid's IQ scores can be attributed to mother's IQ scores, so there are 
+## lots of other variables involved.
+
+## 3) predicting kid_score by mom_hs
+kidscore.momhs <- lm(kid_score ~ mom_hs, data = kidiq)
+
+display(kidscore.momhs)
+## The coefficient estimate intercept here is 77.55, which would be for mom_hs = 0 
+## so if the mother hadn't gone to high school child IQ would be 77.55 and if they did go 
+## to high school it would be +11.77.
+
+## 4) predicting kid_score by mom.iq and mom.hs
+kidscore.momiq.momhs <- lm(kid_score ~ mom_iq + mom_hs, data=kidiq)
+
+display(kidscore.momiq.momhs)
+## The coefficient estimate here is 5.95 for mom_hs and 0.56 for mom_iq. 
+## So when both are factored into the model, children's IQ scores from mothers 
+## who didn't go to high school (and with mom_iq = 0??) are 25.73. 
+## Children's IQ scores from mothers who did go to high school are 5.95 points higher 
+## than those who didn't. And for every unit Mother's IQ scores go up, childrens IQ 
+## scores go up 0.56.
