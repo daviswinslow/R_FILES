@@ -1,0 +1,38 @@
+head(USArrests)
+apply(USArrests, 2, mean)
+apply(USArrests, 2, var)
+pr.out <- prcomp(USArrests, scale=TRUE)
+pr.out$rotation=-pr.out$rotation
+pr.out$x=-pr.out$x
+
+round(pr.out$rotation[,1:2],3)
+biplot(pr.out, scale=0)
+
+GGally::ggpairs(USArrests)
+
+install.packages("MBESS")
+library(MBESS)
+data(HS.data)
+head(HS.data)
+
+hozdata <- HS.data[complete.cases(HS.data),c(7, 9, 10, 12, 13, 15, 16, 18, 19)]  # extracting some variables from the dataset
+summary(hozdata)
+
+hozdatamatrix <- cor(hozdata)
+round(hozdatamatrix,3)
+
+install.packages("psych")
+library(psych)
+
+cortest.bartlett(hozdata)
+
+round(det(hozdatamatrix),7)
+
+dim(hozdata)
+KMO(hozdatamatrix)
+
+model1 <- principal(hozdata, nfactors = 9, rotate = "none")
+model1
+
+plot(model1$values, type = "b") ## "screeplot" - interested in point of inflexion (where the rubble collects at the base of a mountain)
+
