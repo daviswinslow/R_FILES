@@ -1,0 +1,64 @@
+install.packages("arm")
+library(arm)
+library(foreign)
+install.packages("car")
+library(car)
+library(ggplot2)
+
+sesame <- read.dta(file = "/Users/daviswinslow/Dropbox/Advanced Quantitative Methods/R_Database/sesame.dta", convert.dates = TRUE, convert.factors = TRUE, 
+                  missing.type = FALSE, 
+                  convert.underscore = FALSE, warn.missing.labels = TRUE)
+
+summary(sesame)
+
+##2a##
+fit1 <- lm(formula = postlet ~ viewenc, data=sesame)
+display(fit1)
+## Doesn't show that encouragement lead to an increase in post-test scores for letters (in fact has a negative slope).
+
+fit2 <- lm(formula = postnumb ~ viewenc, data=sesame)
+display(fit2)
+## Same for post-test scores for numbers. 
+
+ggplot(sesame, aes(x=postnumb, y=postlet, color=(as.factor(viewenc)))) + geom_point() + geom_smooth(method="lm")
+
+##2b##
+fit4 <- lm(formula = postlet ~ regular, data=sesame)
+display(fit4)
+## The effect of actually watching Sesame Street regularly does have a significant correlation with improved post-test scores for letters, with a coeffecient estimate of 12.69. This model does have a low R-squared though.
+
+fit5 <- lm(formula = postnumb ~ regular, data=sesame)
+display(fit5)
+## Similarly, watching Sesame Street also has a high correlation with improved post-test scores for numbers, although again with a low r-squared.
+
+ggplot(sesame, aes(x=postnumb, y=postlet, color=(as.factor(regular)))) + geom_point() + geom_smooth(method="lm")
+
+## c ## 
+## I don't think either of the two previous estimates can be used to give causal interpretation. Neither explains very much of the variation in the data.
+
+
+##3##
+library(psych)
+survey <- read.csv("http://courses.ttu.edu/isqs6348-westfall/CSV/ttu_websurv.csv")
+survey <- survey[complete.cases(survey), 1:35]
+surveydatamatrix <- cor(survey)
+round(surveydatamatrix,3)
+model1<- principal(survey, nfactors = 35, rotate = "none")
+model1
+model1.nr <- principal(survey, nfactors = 9, rotate = "none")
+print.psych(model1.nr, cut=0.3, sort=T)
+
+
+##################################
+## I developed a correlation matrix and then cut it down to the first nine factors, 
+## which were all that had eigenvalues greater than or equal to 1. 
+## The fit was still 0.96 so it still could reproduce the original correlation matrix fairly well. 
+##
+## The top three questions for PC1 were Q26, Q28, and Q23, all with values over 0.7. 
+## Each of these questions come from the survey bank measuring "attitude toward TTU". 
+## Results for PC2 were more spread out, but Q30 and Q34, from the "attitude toward web site" bank, 
+## scored highest. For PC3, the first question bank, on "ease of finding information", 
+## was most important. Q9 and Q11 had high negative loadings for PC4, and Q12 had a high positive loading. 
+## The “web design” bank had the highest loadings for PC5, and “web design” had high negative loadings for PC7. 
+## PC6, 8, and 9 were scattered across the survey banks. This matrix makes up 1.00 of the cumulative proportion 
+## but only 0.61 of cumulative variance.
