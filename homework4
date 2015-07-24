@@ -1,0 +1,160 @@
+### Solutions for Homework 4, Exercise 1
+
+### Preparing the data
+library(foreign)
+library(arm)
+kidiq <- read.dta("/Users/nmw/Dropbox/Advanced_Quantitative_methods/data/ARM_Data/child.iq/kidiq.dta", convert.underscore = TRUE)
+
+### Refitting the models from the last exercise for comparison later on
+fit2 <- lm(formula = kid.score ~ 1, data=kidiq)
+fit3 <- lm(formula = kid.score ~ mom.hs, data=kidiq)
+fit4 <- lm(formula = kid.score ~ mom.hs + mom.iq, data=kidiq)
+
+####### Exercise 1.5.
+### We fit the model with an interaction term
+fit5 <- lm(formula = kid.score ~ mom.hs + mom.iq + mom.hs:mom.iq, data=kidiq)
+display(fit5)
+
+### Going through the coefficient estimates one by one, we can give the following interpretation (I am writing
+# more than necessary, just to make it very clear what I mean)
+
+# The intercept of -11.5 corresponds to the predicted kid score for children whose mothers did 
+# not complete high school (mom.hs=0) and have an IQ of 0 (mom.iq=0). While a large share of our sample
+# consists of children with mothers that did not complete high school, there are no mothers with an IQ
+# of 0. So this prediction is not meaningful. We will see later on how we can use the intercept for a 
+# more meaningful prediction.
+
+# If there was no interaction term included in the model, we would interpret the coefficient estimate 
+# of mom.hs to be the expected (or predicted) difference between the test scores of children whose 
+# mothers completed high school, and those who did not. However, because of the interaction term, this difference
+# is not the same across different values of mom.iq. You can see this by plotting the regression lines:
+
+library(ggplot2)
+ggplot(data=kidiq, aes(x=mom.iq, y=kid.score, color=as.factor(mom.hs))) + geom_point() + geom_smooth(method="lm")
+
+# By including an interaction term in our model, we have allowed the two regression lines to have different slopes.
+# Thus the vertical difference between the two lines (corresponding to the difference between mom.hs=0 and mom.hs=1 for
+# each level of mom.iq) is not constant. Instead, the coefficient estimate of mom.hs only gives us the expected difference 
+# between the scores of children whose mothers did not complete high school and had IQs of 0, 
+# and children whose mothers did complete high school and had IQs of 0. So we have the same problem as in the exercise above.
+# There are no mothers with IQ=0, therefore we cannot directly interpret this coefficient in a meaningful way.
+
+# You can interpret the coefficient estimate of mom.iq as the difference in the estimated means for children whose mothers did 
+# not complete high school, but whose mothers differed by 1 point of IQ. Remember that the regression line is both our prediction 
+# of the outcome for each level of the predictor(s), but it is also our estimate of the mean for each group
+# with the same value of the predictor. Why is that? Because we think that the conditional mean is the best prediction of the outcome
+# given the information that we have about the predictors (why conditional? because we 'condition' on the value of the predictors. This
+# is the same as saying that we estimate the mean for each 'group' with the same value of the predictor).
+
+# Finally, you can interpret the coefficient estimate of the the interaction term as the difference in the slope for mom.iq, 
+# comparing children with mothers who did and did not complete high school.
+
+# To answer what our model predicts for children of mothers with average IQ, we need to know what the average IQ in our sample is:
+mean(kidiq$mom.iq)
+# Then we need to distinguish between the prediction for mom.hs=0 and mom.hs=1. Remember our underlying regression model. It is:
+# kid.score = b0 + b1*mom.hs + b2*mom.iq + b3*(mom.hs*mom.iq) + error
+# Thus, if we want the prediction for mom.iq=100 with mom.hs=0, and for mom.iq=100 and mom.hs=1, we simply need to plug those values
+# Into the above model, where we replace b0, b1, b2 and b3 with our estimates from regression. The expected value of the error is 0,
+# so we can drop it. Then we get:
+-11.48 + 51.27 + 0.97*100 + (-0.48)*100 ### = 88.79, for the case of mom.hs=1
+-11.48 + 0.97*100 ### = 85.52 for the case of mom.hs=0
+
+# You could also get this result (save some difference due to rounding) from typing:
+predict(fit5, newdata=data.frame(mom.hs=1, mom.iq=100))
+predict(fit5, newdata=data.frame(mom.hs=0, mom.iq=100))
+
+## Exercise 1.6.
+# Because of the difficulties in interpreting the intercept, we might like to center the mom.iq variable, so that 
+# the new variable has a mean of 0. 
+kidiq$c.mom.iq <- kidiq$mom.iq - mean(kidiq$mom.iq)
+# A value of 0 on kidiq$c.mom.iq corresponds to an average IQ of 100.
+# We might also like to take the logarithm of kid.score, because predictions from a model with a log-transformed outcome
+# variable are always positive. 
+kidiq$log.kid.score <- log(kidiq$kid.score)
+# Then we refit the model, using the transformed variables.
+fit6 <- lm(formula = log.kid.score ~ mom.hs + c.mom.iq + mom.hs:c.mom.iq, data=kidiq)
+# I realize that the question doesn't explicitly ask to interpret the new model, but it wouldn't hurt to give it a try.
+display(fit6, digits=4)
+# The intercept of 4.41 corresponds to the predicted LOG kid score for children whose mothers did 
+# not complete high school (mom.hs=0) and have an average IQ of 100. Thus to get the prediction for the
+# original scale, we need to exponantiate this value:
+exp(fit6$coefficients[1]) # this gives the same result as exp(4.4067)
+
+# The coefficient for c.mom.iq is the predicted difference in log kid score corresponding for a 1 unit difference in mom.iq,
+# if mom.hs=0. Thus, we get an estimated predictive difference of 4.6% for a one unit increase in mom.iq, for children whose
+# mothers did not complete high school. We will see what that estimated predictive difference is for mothers who did complete high school
+# when we look at the interaction term.
+
+# The coefficient for mom.hs is the predicted difference in log kid score between children whose moms hdid and did not complete high school,
+# if c.mom.iq equals 0. So, a child whose mom has an IQ of 100 and did not complete high school is predicted to have a log score that 
+# is 0.046 lower than that of a child whose mom has an IQ of 100 and did complete high school. 
+exp(fit6$coefficients[2]) # = 1.047
+# So the second child has a score that is predicted to be 4.7% higher than the first child.
+
+# Finally, you can still interpret the coefficient estimate of the the interaction term as the difference in the slopes for mom.iq, 
+# comparing children with mothers who did and did not complete high school. Thus, having mom.hs=1 corresponds to 0.7% less of a 
+# predicted increase in kid score for each 1 unit increase in mom.iq. Therefore the predicted difference
+# per unit increase in mom.iq is 0.0130-0.0071=0.006, or 0.6%.
+
+### Exercise 1.7
+## The lecture slides 7 were relevant to this question (as well as the Field book). First, we plot the residuals against the fitted values, 
+# and then against the one continuous predictor (mom.iq).
+ggplot(aes(x=.fitted, y=.resid), data=fit5) + geom_point() + geom_smooth(se=FALSE) + labs(x="Fitted values", y="Residuals")
+ggplot(aes(x=mom.iq, y=.resid), data=fit5) + geom_point() + geom_smooth(se=FALSE) + labs(x="Mom IQ", y="Residuals")
+# We see in both plots that the residuals aren't completely free of structure. 
+# In particular, in the plot of residuals against mom.iq there is some evidence of heteroskedasticity: The amount of scattering above and below
+# 0 seems to be less for higher values of mom.iq than for lower values. This is a typical pattern. Using a formal test we barely fail to reject
+# the null hypothesis of homoskedasticity:
+ncvTest(fit5)
+# We should keep this in mind when doing hypothesis tests on the regression coefficients. 
+# We also look at whether the residuals are more or less normally distributed. From the scatterplot, 
+# it does not seem that they are asymmetric or bimodal, so we suspect that they are more or less normally distributed.
+# But let's check the QQ-plot and histogram:
+
+ggplot(fit5, aes(sample=.stdresid)) + stat_qq() + geom_abline()
+ggplot(fit5, aes(x=.resid)) + geom_histogram()
+
+# These plots look very good, we conclude that there is not much deviation from a normal distribution.
+
+# Independence of the errors is not so much a concern for cross-sectional data (that is data that comes from a random sample), so we
+# will not test for it.
+
+# Repeating this exercise for the model of exercise 1.6:
+
+ggplot(aes(x=.fitted, y=.resid), data=fit6) + geom_point() + geom_smooth(se=FALSE) + labs(x="Fitted values", y="Residuals")
+ggplot(aes(x=c.mom.iq, y=.resid), data=fit6) + geom_point() + geom_smooth(se=FALSE) + labs(x="Mom IQ", y="Residuals")
+ncvTest(fit6)
+ggplot(fit6, aes(sample=.stdresid)) + stat_qq() + geom_abline()
+ggplot(fit6, aes(x=.resid)) + geom_histogram()
+
+# These plots look quite a bit worse. This is to be expected: If the original data is already pretty much normally distributed,
+# taking the log will change the distribution and make it log-normal. The transformation also didn't help in alleviating the relatively
+# mild heteroskedasticity in our data. Overall, this suggests that we probably should rely on the first model when making hypothesis tests,
+# even though the second model has solved the problem of negative values (remember, log transformed models never predict negative outcomes).
+# On the other hand, the centering of mom.iq does not affect the fit of the model, so we can still use it.
+
+### Exercise 1.8
+# This question asks you to make two predictions: One about for a point on the regression line, similar to what we have done for instance in
+# question 1.5 above. The other prediction is for a new data point. Let's see how it's done:
+predict(fit5, newdata=data.frame(mom.hs=1, mom.iq=120), interval = "confidence", level = 0.95)
+# This predicts the score for children whose moms have an IQ of 120 and did complete high school (this is the same as saying that this is
+# our estimate of the conditional mean for the group of children with mom.iq=120 and mom.hs=1). R also tells us that the confidence interval
+# it constructed will contain the true value of the mean for this group of children 95% of the time.
+predict(fit5, newdata=data.frame(mom.hs=1, mom.iq=120), interval = "prediction", level = 0.95)
+# Here we predicted a new data point that was not part of the sample. Our uncertainty about this prediction is much higher,
+# because we are predicting "some" point, not necessarily on the regression line, and we know that these points vary all over the place.
+
+## Exercise 1.9
+
+anova(fit2, fit3, fit4, fit5)
+# This shows us that the sum of squared residuals (RSS) falls when going from model 1 to model 4. This is to be expected,
+# because adding more predictors will never increase the RSS and most certainly reduce it. Because we know that 
+# R-squared = 1-RSS/TSS, and because TSS will stay constant, R-squared has to go down. You could also see this by just looking
+# at the output from display() for each model. Note that this does not mean that your model will always become better and better
+# as you add more predictors. Sometimes it's better to have a simpler model, first, for easier interpretations, and second, because
+# such models tend to work better when applied to a new scenario (we might talk about this in the coming weeks).
+
+AIC(fit2, fit3, fit4, fit5); BIC(fit2, fit3, fit4, fit5)
+# These information criteria show that in this case, we would indeed choose model 5, since it has the lowest AIC and BIC of all models.
+# Just a sidenote: sometimes you may want to include an interaction term even if it does not reduce the information criteria, because it helps
+# you understand whether some effect varies between different groups.
