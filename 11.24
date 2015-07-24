@@ -1,0 +1,85 @@
+titanic <- read.csv(file="http://biostat.mc.vanderbilt.edu/wiki/pub/Main/DataSets/titanic3.csv", header=T)
+titanic.full <- subset(titanic, is.na(titanic$age)==FALSE)
+
+semimodel <- glm(survived ~ as.factor(pclass) + sex + age, family=binomial(link="logit"), data=titanic.full)
+plot(semimodel, which=1)
+
+## assumptions: normal distribution, independence of the errors, linearity, and equal variance of the errors (homosketasticity)
+
+## residuals = difference between observed outcomes and model predictions
+
+library(arm)
+
+titanic.full$predicted <- predict(semimodel)
+titanic.full$resid <- resid(semimodel)
+binnedplot(x=titanic.full$predicted, y=titanic.full$resid)
+
+binnedplot(x=titanic.full$age, y=titanic.full$resid, xlab="Age")
+
+## to be safe in R you can ad I() around it, or poly
+fullmodel <- glm(survived ~ as.factor(pclass) + sex + poly(age, 2), family=binomial(link="logit"), data=titanic.full)
+titanic.full$predicted <- predict(fullmodel)
+titanic.full$resid <- resid(fullmodel)
+binnedplot(x=titanic.full$predicted, y=titanic.full$resid)
+
+binnedplot(x=titanic.full$age, y=titanic.full$resid, xlab="Age")
+
+## this is logistic regression - one exam question on this - understanding the 
+## "divide by four" rule, giving rough estimate of maximum change in prediction; 
+## also looking at generally predictions rather than this model testing; 
+## comparing models (is something statistically significant)
+
+## if you have some combination of predictors with no observed values
+
+
+### CLUSTER ANALYSIS
+### groups observations in your data together that are similar -- may show meaningful groups/classes
+### tries to find groups so that observations in each group are as similar as possible as each other and far as possible from other groups
+### unsupervised learning problem - don't have to correct problems
+### like in the case of factor analysis, not really a 'correct' outcome: just 'does it make sense'
+### different methods of doing it - will always get result even if no true clusters
+
+### K-means - one way of doing cluster analysis
+### prototype-based; associates each cluster with 'central element'
+### you try and find the most typical element and the solution which minimizes variation within each group
+### randomly assigns each observation to a particular cluster; then find average
+### then you reassign observations to closest cluster, find new average, and so on
+### always uses all observations (outliers pull the solution in a particular way)
+
+install.packages("animation")
+library(animation)
+oopt = ani.options(interval = 2, nmax = 15)
+kmeans.ani()
+
+
+xclara.kmeans2 <- kmeans(xclara, 3, nstart = 20)
+xclara$cluster2 <- as.factor(xclara.kmeans2$cluster)
+xclara.kmeans2$tot.withinss
+
+ggplot(xclara, aes(x=V1, y=V2, color=cluster2)) + geom_point()
+
+### Think back to GIS, Euclidian distance & Manhattan distance
+### deciding how many clusters to use:
+### look at criterion function of within sum of squares
+### look at hierarchical methods
+### begin with each observation being its own cluster, then begin merging them together 
+### based on how close they are to each other
+### gives you a vendogram
+### computing the proximity matrix, merge, rinse and repeat
+### different linkages - average, complete, and single
+
+hc <- hclust(dist(USArrests), method = "complete")
+plot(hc, hang = -1, labels=rownames(USArrests))
+
+pr.out <- prcomp(USArrests, scale=TRUE)
+pr.out$rotation=-pr.out$rotation
+pr.out$x=-pr.out$x
+USArrests$clusters <- as.factor(cutree(hc,4))
+USArrests$PCscores <- pr.out$x
+ggplot(data=USArrests, aes(x=PCscores[,1], y=PCscores[,2], color=clusters, label=rownames(USArrests))) + geom_text()
+
+
+
+
+
+
